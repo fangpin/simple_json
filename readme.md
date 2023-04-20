@@ -1,21 +1,29 @@
 # A simple Json library
 A simple header only json implementation in C++17.
 
-- Simple to use.
+- [A simple Json library](#a-simple-json-library)
+- [Basic Examples](#basic-examples)
+  - [Simple to use.](#simple-to-use)
+  - [update nested property in place](#update-nested-property-in-place)
+  - [serialize without indent](#serialize-without-indent)
+- [Roadmap](#roadmap)
+
+# Basic Examples
+## Simple to use.
 ```cpp
-JValue person(JValue::type::Object);
-person["name"] = JValue("Pin");
-person["age"] = JValue(18);
-person["height"] = JValue(179.9);
-person["sports"] = {"basketball", "football", "swimming"};
-
-// nested object
-JValue aFriend(JValue::type::Object);
-aFriend["name"] = "Jun";
-aFriend["sports"] = {"tennis", "dance"};
-aFriend["age"] = 19;
-
-person["girl_friend"] = aFriend;
+JValue person = unordered_map<string, JValue>{
+    {"name", "pin"},
+    {"age", 18},
+    {"height", 179.9},
+    {"sports", {"basketball", "football", "swimming"}},
+    // nested object
+    {"girl_friend",
+      unordered_map<string, JValue>{
+          {"name", "Jun"},
+          {"sports", {"tennis", "dance"}},
+          {"age", 19}
+      }}
+};
 
 // serialize
 cout << JValue::Serialize(person) << endl;
@@ -43,45 +51,50 @@ the output
 }
 ```
 
-- update nested property in place
+## update nested property in place
 ```cpp
-JValue person(JValue::type::Object);
-person["name"] = JValue("Pin");
-person["age"] = JValue(18);
-person["height"] = JValue(179.9);
-person["sports"] = {"basketball", "football", "swimming"};
+JValue person = unordered_map<string, JValue>{
+    {"name", "pin"},
+    {"age", 18},
+    {"height", 179.9},
+    {"sports", {"basketball", "football", "swimming"}},
+    // nested object
+    {"girl_friend",
+      unordered_map<string, JValue>{
+          {"name", "Jun"},
+          {"sports", {"tennis", "dance"}},
+          {"age", 19}
+      }}
+};
 
-// nested object
-JValue aFriend(JValue::type::Object);
-aFriend["name"] = "Jun";
-aFriend["sports"] = {"tennis", "dance"};
-aFriend["age"] = 19;
-
-person["girl_friend"] = aFriend;
-
-// update property
+// update in place
 person["girl_friend"]["age"] = 20;
 cout << JValue::Serialize(person) << endl;
 ```
 
-- serialize without indent
+## serialize without indent
 ```cpp
-// initialize
-JValue person(JValue::type::Object);
-person["name"] = JValue("Pin");
-person["age"] = JValue(18);
-person["height"] = JValue(179.9);
-person["sports"] = {"basketball", "football", "swimming"};
+JValue person = unordered_map<string, JValue>{
+    {"name", "pin"},
+    {"age", 18},
+    {"height", 179.9},
+    {"sports", {"basketball", "football", "swimming"}},
+    // nested object
+    {"girl_friend",
+      unordered_map<string, JValue>{
+          {"name", "Jun"},
+          {"sports", {"tennis", "dance"}},
+          {"age", 19}
+      }}
+};
 
-// nested object
-JValue aFriend(JValue::type::Object);
-aFriend["name"] = "Jun";
-aFriend["sports"] = {"tennis", "dance"};
-aFriend["age"] = 19;
-
-person["girl_friend"] = aFriend;
-
-// serialize without indent
 cout << JValue::Serialize(person, false) << endl;
-cout << endl;
 ```
+
+# Roadmap
+- [x] Serialize
+- [ ] Deserialize
+- [ ] Escape/Unescape string
+- [ ] Keep object's original order
+- [ ] Memory pool
+- [ ] simd optimization

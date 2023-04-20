@@ -82,8 +82,6 @@ public:
         }
     }
 
-    JValue(std::unordered_map<std::string, JValue> obj) : t_{type::Object}, o_(obj) {}
-
     JValue(const std::unordered_map<std::string, JValue>& map) : t_{type::Object}, o_(map) {}
 
     JValue(const JValue& other) : t_{other.t_}, nt_{other.nt_}, s_{other.s_}, i_{other.i_}, d_{other.d_}, b_{other.b_}, o_{other.o_}, a_{other.a_} {}
