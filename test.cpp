@@ -12,15 +12,12 @@ void basic_example() {
         {"name", "pin"},
         {"age", 18},
         {"height", 179.9},
+        {"flag", true},
         {"sports", {"basketball", "football", "swimming"}},
         // nested object
         {"girl_friend",
          unordered_map<string, JValue>{
-             {"name", "Jun"},
-             {"sports", {"tennis", "dance"}},
-             {"age", 19}
-         }}
-    };
+             {"name", "Jun"}, {"sports", {"tennis", "dance"}}, {"age", 19}}}};
 
     // serialize
     cout << JValue::Serialize(person) << endl;
@@ -70,10 +67,37 @@ void no_indent_example() {
     cout << endl;
 }
 
+void deserialize_example() {
+    cout << "**************deserialize_example********************" << endl;
+    JValue object = JValue::Deserialize(R"(
+    {
+        "girl_friend" : {
+            "name" : "Jun",
+            "age" : 19,
+            "sports" : [
+                "tennis",
+                "dance"
+            ]
+        },
+        "sports" : [
+            "basketball",
+            "football",
+            "swimming"
+        ],
+        "height" : 179.9,
+        "age" : 18,
+        "name" : "Pin"
+    })");
+
+    cout << JValue::Serialize(object) << endl;
+    cout << endl;
+}
+
 int main() {
     basic_example();
     update_example();
     no_indent_example();
+    deserialize_example();
 
     return 0;
 }

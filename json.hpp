@@ -1,4 +1,4 @@
-#ifndef _JSON_H
+#pragma once
 
 #include <string>
 #include <iostream>
@@ -10,16 +10,16 @@
 #include <list>
 #include <concepts>
 #include <exception>
+#include <algorithm>
 
-inline void output_spaces(std::ostream& os, int space_width, int space_number) {
-    for (int i=0; i<space_width * space_number; ++i) {
+static inline void output_spaces(std::ostream &os, int space_width, int space_number) {
+    for (int i = 0; i < space_width * space_number; ++i) {
         os << ' ';
     }
 }
-
 namespace json {
 class JValue {
-public:
+  public:
     enum class type : char {
         String,
         Number,
@@ -68,6 +68,7 @@ public:
     JValue(const char* s) : t_{type::String}, s_(s) {}
 
     JValue(int64_t value) : t_{type::Number}, nt_{number_type::Interger}, i_{value} {}
+
     JValue(int32_t value) : t_{type::Number}, nt_{number_type::Interger}, i_{value} {}
 
     JValue(double value) : t_{type::Number}, nt_{number_type::Float}, d_{value} {}
@@ -75,6 +76,10 @@ public:
     JValue(bool flag) : t_{type::Bool}, b_{flag} {}
 
     JValue(const std::initializer_list<JValue>& il) : t_{type::Array}, a_(il) {}
+
+    operator bool() const {
+        return t_ != type::Unknown;
+    }
 
     template<typename ForwardIter> JValue(ForwardIter first, ForwardIter last) : t_{type::Array} {
         for (; first != last; ++first) {
@@ -138,6 +143,14 @@ public:
         return a_;
     }
 
+    std::vector<JValue>& Array() {
+        if (t_ != type::Array) {
+            throw std::runtime_error("Expect type array but get " +
+                                     TypeString(t_));
+        }
+        return a_;
+    }
+
     const std::unordered_map<std::string, JValue>& Object() const {
         if (t_ != type::Object) {
             throw std::runtime_error("Expect type object but get " + TypeString(t_));
@@ -168,6 +181,28 @@ public:
         return o_[s];
     }
 
+    JValue& operator[](const char* s) {
+        return operator[](std::string{s});
+    }
+
+    bool Has(std::string_view sv) {
+        if (t_ != type::Object) {
+            throw std::runtime_error("Expect type object to invoke Has method, but get type " + TypeString(t_));
+        }
+        return o_.find(std::string(sv)) != o_.end();
+    }
+
+    void SetError() {
+        t_ = type::Unknown;
+        nt_ = number_type::Unknown;
+        o_.clear();
+        a_.clear();
+    }
+
+    type Type() const {
+        return t_;
+    }
+
     static void Serialize(std::ostream &os, const JValue &jvalue, bool indent = true, int indentWidth = 2, int depth = 0) {
         if (depth > MaxDepth) {
             throw std::runtime_error("json depth " + std::to_string(depth) + " exceeds the max depth " + std::to_string(MaxDepth));
@@ -185,7 +220,7 @@ public:
             }
             break;
         case type::Bool:
-            os << jvalue.Value<bool>();
+            os << (jvalue.Value<bool>() ? "true" : "false");
             break;
         case type::Array:
             os << (indent ? "[\n" : "[");
@@ -231,6 +266,216 @@ public:
         return ss.str();
     }
 
+    static JValue Deserialize(std::string_view sv) {
+        class Parser
+        {
+        public:
+            Parser(std::string_view sv) : s_(sv), pos_(0) {}
+
+            json::JValue Parse() {
+                ConsumeSpaces();
+                if (pos_ >= s_.size()) {
+                    return {};
+                }
+                if (s_[pos_] == '{') {
+                    return ParseObject();
+                } else if (s_[pos_] == '[') {
+                    return ParseArray();
+                } else if (s_[pos_] == '"') {
+                    return ParseString();
+                } else if (s_[pos_] == 't' && s_.substr(pos_, 4) == "true") {
+                    pos_ += 4;
+                    return {true};
+                } else if (s_[pos_] == 'f' && s_.substr(pos_, 5) == "false") {
+                    pos_ += 5;
+                    return {false};
+                } else {
+                    return ParseNumber();
+                }
+            }
+
+            JValue ParseString() {
+                if (!Consume('"')) {
+                    return {};
+                }
+                int start = pos_;
+                while (1) {
+                    if (s_[pos_] == '"') {
+                        return JValue(std::string_view(s_.data() + start, pos_ - start));
+                    } else {
+                        ++pos_;
+                        if (pos_ >= s_.size()) {
+                            return {};
+                        }
+                    }
+                }
+                return {};
+            }
+
+            JValue ParseArray() {
+                JValue ret(JValue::type::Array);
+                ConsumeSpaces();
+                if (!Consume('[')) {
+                    ret.SetError();
+                } else {
+                    return {};
+                }
+
+                while (1) {
+                    ConsumeSpaces();
+                    if (pos_ >= s_.size()) {
+                        ret.SetError();
+                        break;
+                    }
+                    if (s_[pos_] == ']') {
+                        ++pos_;
+                        break;
+                    }
+                    JValue item = Parse();
+                    if (item) {
+                        ret.Array().emplace_back(Parse());
+                    } else {
+                        return {};
+                    }
+                    ConsumeSpaces();
+                    if (!Consume(',')) {
+                        return {};
+                    }
+                }
+                return ret;
+            }
+
+            JValue ParseObject() {
+                JValue ret(JValue::type::Object);
+                ConsumeSpaces();
+                if (Consume('{')) {
+                    ret.SetError();
+                } else {
+                    return {};
+                }
+
+                while (1) {
+                    ConsumeSpaces();
+                    if (pos_ >= s_.size()) {
+                        return {};
+                    }
+                    if (s_[pos_] == '}') {
+                        ++pos_;
+                        break;
+                    }
+                    std::string key = ParseString().Value<std::string>();
+                    ConsumeSpaces();
+                    if (!Consume(':')) {
+                        return {};
+                    }
+                    ConsumeSpaces();
+                    JValue v = Parse();
+                    ret[key] = v;
+                    if (!Consume(',')) {
+                        return {};
+                    }
+                }
+                return ret;
+            }
+
+            JValue ParseNumber() {
+                enum State {
+                Start,
+                Minus,
+                ZeroFirst,
+                Digits,
+                DigitsAfterMinus,
+                DigitsAfterPoint,
+                Point,
+                Invliad,
+                } state{Start};
+                size_t start = pos_;
+                while (state != State::Invliad) {
+                    switch (s_[pos_]) {
+                    case '-':
+                        if (state == State::Start) {
+                            state = State::Minus;
+                        } else {
+                            state = State::Invliad;
+                        }
+                        break;
+                    case '0':
+                        if (state == State::Start) {
+                            state = State::ZeroFirst;
+                        } else if (state == State::ZeroFirst || state == State::Digits || state == State::DigitsAfterMinus || state == State::DigitsAfterMinus || state == State::DigitsAfterPoint) {
+                            // do nothing
+                        } else if (state == State::Point) {
+                            state = State::DigitsAfterPoint;
+                        } else {
+                            state = State::Invliad;
+                        }
+                        break;
+                    case '1':
+                    case '2':
+                    case '3':
+                    case '4':
+                    case '5':
+                    case '6':
+                    case '7':
+                    case '8':
+                    case '9':
+                        if (state == State::Start || state == State::Minus || state == State::Point) {
+                            state = State::Digits;
+                        } else if (state == State::ZeroFirst) {
+                            start = pos_;
+                            state = State::Digits;
+                        } else if (state == State::Digits || state == State::DigitsAfterMinus || state == State::DigitsAfterPoint) {
+                            // do nothing
+                        } else {
+                            state = State::Invliad;
+                        }
+                        break;
+                    case '.':
+                        if (state == State::Start || state == State::ZeroFirst || state == State::Minus || state == State::Digits || state == State::DigitsAfterMinus) {
+                            state = State::Point;
+                        } else if (state == State::ZeroFirst) {
+                            state = State::Point;
+                            start = pos_;
+                        } else {
+                            state = State::Invliad;
+                        }
+                        break;
+                    default:
+                        if (state == State::DigitsAfterPoint || state == State::Point) {
+                            return JValue(s_.substr(start, pos_ - start));
+                        } else {
+                            return JValue(s_.substr(start, pos_ - start));
+                        }
+                    }
+                    ++pos_;
+                }
+                return {};
+            }
+
+        private:
+            void ConsumeSpaces() {
+                for (; pos_ != s_.size() && (s_[pos_] == ' ' || s_[pos_] == '\t' || s_[pos_] == '\n' || s_[pos_] == '\r'); ++pos_);
+            }
+
+            bool Consume(const char c) {
+                if (pos_ >= s_.size() || s_[pos_] != c) {
+                    return false;
+                }
+                ++pos_;
+                return true;
+            }
+
+            std::string_view s_;
+            size_t pos_;
+        };
+        Parser parser(sv);
+        return parser.Parse();
+    }
+
+    static JValue Deserialize(const char* s) {
+        return Deserialize(std::string_view{s});
+    }
+
 private:
     template <typename T>
     const typename std::enable_if_t<std::is_integral<T>::value, T>& ValueImpl() const {
@@ -259,7 +504,5 @@ private:
     std::vector<JValue> a_;
     const static int MaxDepth = 1000;
 };
-} // namespace json
 
-#define _JSON_H
-#endif
+} // namespace json
