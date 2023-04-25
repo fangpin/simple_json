@@ -4,11 +4,10 @@
 #include <iostream>
 #include <sstream>
 #include <string_view>
-#include <unordered_map>
+#include <map>
 #include <vector>
 #include <initializer_list>
 #include <list>
-#include <concepts>
 #include <exception>
 #include <algorithm>
 
@@ -17,6 +16,7 @@ static inline void output_spaces(std::ostream &os, int space_width, int space_nu
         os << ' ';
     }
 }
+
 namespace json {
 class JValue {
   public:
@@ -87,7 +87,7 @@ class JValue {
         }
     }
 
-    JValue(const std::unordered_map<std::string, JValue>& map) : t_{type::Object}, o_(map) {}
+    JValue(const std::map<std::string, JValue>& map) : t_{type::Object}, o_(map) {}
 
     JValue(const JValue& other) : t_{other.t_}, nt_{other.nt_}, s_{other.s_}, i_{other.i_}, d_{other.d_}, b_{other.b_}, o_{other.o_}, a_{other.a_} {}
 
@@ -118,21 +118,30 @@ class JValue {
     }
 
     template<typename T>
-    const T& Value() const {
-        return ValueImpl<T>();
-    }
-
-    template<>
-    const double& Value<double>() const {
-        return d_;
-    }
-
-    template<>
-    const std::string& Value<std::string>() const {
-        if (t_ != type::String) {
-            throw std::runtime_error("Expect type string but get " + TypeString(t_));
+    const T Value() const {
+        if constexpr (std::is_integral<T>::value) {
+            switch (t_) {
+            case type::Bool:
+                return b_;
+            case type::Number:
+                if (nt_ == number_type::Float) {
+                    return d_;
+                } else {
+                    return i_;
+                }
+            default:
+                throw std::runtime_error("Expect type number or bool, but get " +
+                                            TypeString(t_));
+            }
         }
-        return s_;
+        if constexpr (std::is_same_v<T, std::string>) {
+            return s_;
+        }
+        if constexpr (std::is_same_v<T, double>) {
+            return d_;
+        }
+
+        throw std::runtime_error("Unsported template type");
     }
 
     const std::vector<JValue>& Array() const {
@@ -151,7 +160,14 @@ class JValue {
         return a_;
     }
 
-    const std::unordered_map<std::string, JValue>& Object() const {
+    const std::map<std::string, JValue>& Object() const {
+        if (t_ != type::Object) {
+            throw std::runtime_error("Expect type object but get " + TypeString(t_));
+        }
+        return o_;
+    }
+
+    std::map<std::string, JValue>& Object() {
         if (t_ != type::Object) {
             throw std::runtime_error("Expect type object but get " + TypeString(t_));
         }
@@ -267,9 +283,8 @@ class JValue {
     }
 
     static JValue Deserialize(std::string_view sv) {
-        class Parser
+        struct Parser
         {
-        public:
             Parser(std::string_view sv) : s_(sv), pos_(0) {}
 
             json::JValue Parse() {
@@ -452,7 +467,6 @@ class JValue {
                 return {};
             }
 
-        private:
             void ConsumeSpaces() {
                 for (; pos_ != s_.size() && (s_[pos_] == ' ' || s_[pos_] == '\t' || s_[pos_] == '\n' || s_[pos_] == '\r'); ++pos_);
             }
@@ -468,6 +482,7 @@ class JValue {
             std::string_view s_;
             size_t pos_;
         };
+
         Parser parser(sv);
         return parser.Parse();
     }
@@ -477,30 +492,13 @@ class JValue {
     }
 
 private:
-    template <typename T>
-    const typename std::enable_if_t<std::is_integral<T>::value, T>& ValueImpl() const {
-        switch (t_) {
-        case type::Bool:
-            return b_;
-        case type::Number:
-            if (nt_ == number_type::Float) {
-                return d_;
-            } else {
-                return i_;
-            }
-        default:
-            throw std::runtime_error("Expect type number or bool, but get " +
-                                     TypeString(t_));
-        }
-    }
-
     type t_;
     number_type nt_{number_type::Unknown};
     std::string s_;
     int64_t i_;
     double d_;
     bool b_;
-    std::unordered_map<std::string, JValue> o_;
+    std::map<std::string, JValue> o_;
     std::vector<JValue> a_;
     const static int MaxDepth = 1000;
 };

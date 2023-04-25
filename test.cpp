@@ -1,5 +1,5 @@
 #include <iostream>
-#include <unordered_map>
+#include <map>
 #include "json.hpp"
 
 using namespace std;
@@ -8,7 +8,7 @@ using namespace json;
 void basic_example() {
     cout << "**************basic_example********************" << endl;
 
-    JValue person = unordered_map<string, JValue>{
+    JValue person = map<string, JValue> {
         {"name", "pin"},
         {"age", 18},
         {"height", 179.9},
@@ -16,7 +16,7 @@ void basic_example() {
         {"sports", {"basketball", "football", "swimming"}},
         // nested object
         {"girl_friend",
-         unordered_map<string, JValue>{
+         map<string, JValue>{
              {"name", "Jun"}, {"sports", {"tennis", "dance"}}, {"age", 19}}}};
 
     // serialize
@@ -27,14 +27,14 @@ void basic_example() {
 void update_example() {
     cout << "**************update_example********************" << endl;
 
-    JValue person = unordered_map<string, JValue>{
+    JValue person = map<string, JValue> {
         {"name", "pin"},
         {"age", 18},
         {"height", 179.9},
         {"sports", {"basketball", "football", "swimming"}},
         // nested object
         {"girl_friend",
-         unordered_map<string, JValue>{
+         map<string, JValue>{
              {"name", "Jun"},
              {"sports", {"tennis", "dance"}},
              {"age", 19}
@@ -49,14 +49,14 @@ void update_example() {
 
 void no_indent_example() {
     cout << "**************no_indent_example********************" << endl;
-    JValue person = unordered_map<string, JValue>{
+    JValue person = map<string, JValue> {
         {"name", "pin"},
         {"age", 18},
         {"height", 179.9},
         {"sports", {"basketball", "football", "swimming"}},
         // nested object
         {"girl_friend",
-         unordered_map<string, JValue>{
+         map<string, JValue>{
              {"name", "Jun"},
              {"sports", {"tennis", "dance"}},
              {"age", 19}
