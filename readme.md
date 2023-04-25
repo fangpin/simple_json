@@ -8,6 +8,7 @@ This is a subway project, as an entertainment, I did most work during my daily t
 - [Features](#features)
   - [STL-style API is provided.](#stl-style-api-is-provided)
   - [Simple to Seriliaze an JSON object](#simple-to-seriliaze-an-json-object)
+- [build](#build)
 
 # Roadmap
 - [x] Serialize
@@ -88,4 +89,28 @@ the output is:
   "age": 18,
   "name": "Pin"
 }
+```
+
+# build
+Tested on 
+```bash
+clang version 10.0.0-4ubuntu1
+Target: x86_64-pc-linux-gnu
+Thread model: posix
+InstalledDir: /usr/bin
+```
+```bash
+g++ (Ubuntu 10.3.0-1ubuntu1~20.04) 10.3.0
+Copyright (C) 2020 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+```
+
+compile the test file with
+```bash
+g++ test.cpp -std=c++17
+```
+or
+```bash
+clang++ test.cpp -std=c++17
 ```
