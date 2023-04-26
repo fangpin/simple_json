@@ -63,9 +63,13 @@ class JValue {
 
     JValue(type tp = type::Unknown) : t_{tp} {}
 
-    JValue(std::string_view sv) : t_{type::String}, s_(sv) {}
+    JValue(std::string_view sv) : t_(type::String), s_(sv.begin(), sv.end()) {}
+
+    JValue(const std::string& s) : t_(type::String), s_(s) {}
 
     JValue(const char* s) : t_{type::String}, s_(s) {}
+
+    JValue(const char* s, int cout) : JValue(std::string_view(s, cout)) {}
 
     JValue(int64_t value) : t_{type::Number}, nt_{number_type::Interger}, i_{value} {}
 
@@ -285,23 +289,23 @@ class JValue {
     static JValue Deserialize(std::string_view sv) {
         struct Parser
         {
-            Parser(std::string_view sv) : s_(sv), pos_(0) {}
+            Parser(std::string_view sv) : data_(sv), pos_(0) {}
 
             json::JValue Parse() {
                 ConsumeSpaces();
-                if (pos_ >= s_.size()) {
+                if (pos_ >= data_.size()) {
                     return {};
                 }
-                if (s_[pos_] == '{') {
+                if (data_[pos_] == '{') {
                     return ParseObject();
-                } else if (s_[pos_] == '[') {
+                } else if (data_[pos_] == '[') {
                     return ParseArray();
-                } else if (s_[pos_] == '"') {
+                } else if (data_[pos_] == '"') {
                     return ParseString();
-                } else if (s_[pos_] == 't' && s_.substr(pos_, 4) == "true") {
+                } else if (data_[pos_] == 't' && data_.substr(pos_, 4) == "true") {
                     pos_ += 4;
                     return {true};
-                } else if (s_[pos_] == 'f' && s_.substr(pos_, 5) == "false") {
+                } else if (data_[pos_] == 'f' && data_.substr(pos_, 5) == "false") {
                     pos_ += 5;
                     return {false};
                 } else {
@@ -309,22 +313,23 @@ class JValue {
                 }
             }
 
-            JValue ParseString() {
+            std::string ParseString() {
                 if (!Consume('"')) {
-                    return {};
+                    throw std::runtime_error("Expect \" when parsing string");
                 }
                 int start = pos_;
                 while (1) {
-                    if (s_[pos_] == '"') {
-                        return JValue(std::string_view(s_.data() + start, pos_ - start));
+                    if (data_[pos_] == '"') {
+                      ++pos_;
+                      return {data_.begin() + start, data_.begin() + pos_ - 1};
                     } else {
                         ++pos_;
-                        if (pos_ >= s_.size()) {
-                            return {};
+                        if (pos_ >= data_.size()) {
+                            throw std::runtime_error("index out of range");
                         }
                     }
                 }
-                return {};
+                return "";
             }
 
             JValue ParseArray() {
@@ -338,11 +343,11 @@ class JValue {
 
                 while (1) {
                     ConsumeSpaces();
-                    if (pos_ >= s_.size()) {
+                    if (pos_ >= data_.size()) {
                         ret.SetError();
                         break;
                     }
-                    if (s_[pos_] == ']') {
+                    if (data_[pos_] == ']') {
                         ++pos_;
                         break;
                     }
@@ -363,22 +368,21 @@ class JValue {
             JValue ParseObject() {
                 JValue ret(JValue::type::Object);
                 ConsumeSpaces();
-                if (Consume('{')) {
+                if (!Consume('{')) {
                     ret.SetError();
-                } else {
                     return {};
                 }
 
                 while (1) {
                     ConsumeSpaces();
-                    if (pos_ >= s_.size()) {
+                    if (pos_ >= data_.size()) {
                         return {};
                     }
-                    if (s_[pos_] == '}') {
+                    if (data_[pos_] == '}') {
                         ++pos_;
                         break;
                     }
-                    std::string key = ParseString().Value<std::string>();
+                    std::string key = ParseString();
                     ConsumeSpaces();
                     if (!Consume(':')) {
                         return {};
@@ -406,7 +410,7 @@ class JValue {
                 } state{Start};
                 size_t start = pos_;
                 while (state != State::Invliad) {
-                    switch (s_[pos_]) {
+                    switch (data_[pos_]) {
                     case '-':
                         if (state == State::Start) {
                             state = State::Minus;
@@ -457,9 +461,9 @@ class JValue {
                         break;
                     default:
                         if (state == State::DigitsAfterPoint || state == State::Point) {
-                            return JValue(s_.substr(start, pos_ - start));
+                            return JValue(data_.substr(start, pos_ - start));
                         } else {
-                            return JValue(s_.substr(start, pos_ - start));
+                            return JValue(data_.substr(start, pos_ - start));
                         }
                     }
                     ++pos_;
@@ -468,18 +472,18 @@ class JValue {
             }
 
             void ConsumeSpaces() {
-                for (; pos_ != s_.size() && (s_[pos_] == ' ' || s_[pos_] == '\t' || s_[pos_] == '\n' || s_[pos_] == '\r'); ++pos_);
+                for (; pos_ != data_.size() && (data_[pos_] == ' ' || data_[pos_] == '\t' || data_[pos_] == '\n' || data_[pos_] == '\r'); ++pos_);
             }
 
             bool Consume(const char c) {
-                if (pos_ >= s_.size() || s_[pos_] != c) {
+                if (pos_ >= data_.size() || data_[pos_] != c) {
                     return false;
                 }
                 ++pos_;
                 return true;
             }
 
-            std::string_view s_;
+            std::string_view data_;
             size_t pos_;
         };
 
@@ -493,7 +497,7 @@ class JValue {
 
 private:
     type t_;
-    number_type nt_{number_type::Unknown};
+    number_type nt_;
     std::string s_;
     int64_t i_;
     double d_;

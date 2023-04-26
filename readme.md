@@ -16,7 +16,7 @@ This is a subway project, as an entertainment, I did most work during my daily t
 - [ ] Memory pool optimization
 - [ ] simd optimization
 - [ ] Escape/Unescape string
-- [ ] Unicode
+- [ ] Unicode support
 
 # Features
 ## STL-style API is provided.
@@ -45,7 +45,7 @@ person["girl_friend"]["age"] = 20;
 Similarly, the JSON array is very close to std::vector, you can use JSON array simply like:
 ```cpp
 JValue array = {"a", "b", "c"};
-array.Array().push_back("a");
+array.Array().push_back("d");
 ```
 
 Convert any supported type to JSON object/array/value directly
@@ -53,7 +53,8 @@ Convert any supported type to JSON object/array/value directly
 JValue b = bool;
 JValue s = "a string";
 JValue i = 24;
-JValue d = 1.0
+JValue d = 1.0;
+JValue array = {"abc", 456};
 ```
 
 Get the actual type of the JSON value by
