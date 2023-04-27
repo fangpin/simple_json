@@ -300,44 +300,51 @@ class JValue {
                     return ParseObject();
                 } else if (data_[pos_] == '[') {
                     return ParseArray();
-                } else if (data_[pos_] == '"') {
+                } else if (data_[pos_] == '\"') {
                     return ParseString();
-                } else if (data_[pos_] == 't' && data_.substr(pos_, 4) == "true") {
-                    pos_ += 4;
-                    return {true};
-                } else if (data_[pos_] == 'f' && data_.substr(pos_, 5) == "false") {
-                    pos_ += 5;
-                    return {false};
+                } else if (data_[pos_] == 't') {
+                    if (data_.substr(pos_, 4) == "true") {
+                        pos_ += 4;
+                        return {true};
+                    } else {
+                        return {};
+                    }
+                } else if (data_[pos_] == 'f') {
+                    if (data_.substr(pos_, 5) == "false") {
+                        pos_ += 5;
+                        return {false};
+                    } else {
+                        return {};
+                    }
                 } else {
                     return ParseNumber();
                 }
             }
 
-            std::string ParseString() {
-                if (!Consume('"')) {
-                    throw std::runtime_error("Expect \" when parsing string");
+            JValue ParseString() {
+                if (!Consume('\"')) {
+                    return {};
                 }
                 int start = pos_;
                 while (1) {
-                    if (data_[pos_] == '"') {
-                      ++pos_;
-                      return {data_.begin() + start, data_.begin() + pos_ - 1};
+                    if (data_[pos_] == '\"') {
+                        ++pos_;
+                        std::string_view ret = data_.substr(start, pos_ - 1 - start);
+                        return ret;
                     } else {
                         ++pos_;
                         if (pos_ >= data_.size()) {
-                            throw std::runtime_error("index out of range");
+                            return {};
                         }
                     }
                 }
-                return "";
+                return {};
             }
 
             JValue ParseArray() {
                 JValue ret(JValue::type::Array);
                 ConsumeSpaces();
                 if (!Consume('[')) {
-                    ret.SetError();
-                } else {
                     return {};
                 }
 
@@ -351,16 +358,18 @@ class JValue {
                         ++pos_;
                         break;
                     }
+                    if (!ret.Array().empty()) {
+                        if (!Consume(',')) {
+                            return {};
+                        }
+                    }
                     JValue item = Parse();
                     if (item) {
-                        ret.Array().emplace_back(Parse());
+                        ret.Array().push_back(item);
                     } else {
                         return {};
                     }
                     ConsumeSpaces();
-                    if (!Consume(',')) {
-                        return {};
-                    }
                 }
                 return ret;
             }
@@ -369,7 +378,6 @@ class JValue {
                 JValue ret(JValue::type::Object);
                 ConsumeSpaces();
                 if (!Consume('{')) {
-                    ret.SetError();
                     return {};
                 }
 
@@ -382,7 +390,10 @@ class JValue {
                         ++pos_;
                         break;
                     }
-                    std::string key = ParseString();
+                    if (!ret.Object().empty() && !Consume(',')) {
+                        return {};
+                    }
+                    std::string key = ParseString().Value<std::string>();
                     ConsumeSpaces();
                     if (!Consume(':')) {
                         return {};
@@ -390,9 +401,6 @@ class JValue {
                     ConsumeSpaces();
                     JValue v = Parse();
                     ret[key] = v;
-                    if (!Consume(',')) {
-                        return {};
-                    }
                 }
                 return ret;
             }
@@ -421,7 +429,7 @@ class JValue {
                     case '0':
                         if (state == State::Start) {
                             state = State::ZeroFirst;
-                        } else if (state == State::ZeroFirst || state == State::Digits || state == State::DigitsAfterMinus || state == State::DigitsAfterMinus || state == State::DigitsAfterPoint) {
+                        } else if (state == State::ZeroFirst || state == State::Digits || state == State::DigitsAfterMinus || state == State::DigitsAfterPoint) {
                             // do nothing
                         } else if (state == State::Point) {
                             state = State::DigitsAfterPoint;
@@ -472,7 +480,7 @@ class JValue {
             }
 
             void ConsumeSpaces() {
-                for (; pos_ != data_.size() && (data_[pos_] == ' ' || data_[pos_] == '\t' || data_[pos_] == '\n' || data_[pos_] == '\r'); ++pos_);
+                for (; pos_ < data_.size() && (data_[pos_] == ' ' || data_[pos_] == '\t' || data_[pos_] == '\n' || data_[pos_] == '\r'); ++pos_);
             }
 
             bool Consume(const char c) {
