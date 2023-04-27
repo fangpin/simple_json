@@ -72,7 +72,14 @@ void deserialize_example() {
     JValue object = JValue::Deserialize(R"(
     {
         "name" : "pin",
-"x" : "y"
+        "age" : 18,
+        "height" : 179.9,
+        "sports" : ["basketball", "football", "swimming"],
+        "girl_friend" : {
+            "name" : "Jun",
+            "age" : 19,
+            "sports" : ["tennis", "dance"]
+        }
     })");
 
     cout << JValue::Serialize(object) << endl;

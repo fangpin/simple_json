@@ -3,7 +3,6 @@
 #include <string>
 #include <iostream>
 #include <sstream>
-#include <string_view>
 #include <map>
 #include <vector>
 #include <initializer_list>
@@ -63,13 +62,11 @@ class JValue {
 
     JValue(type tp = type::Unknown) : t_{tp} {}
 
-    JValue(std::string_view sv) : t_(type::String), s_(sv.begin(), sv.end()) {}
-
     JValue(const std::string& s) : t_(type::String), s_(s) {}
 
     JValue(const char* s) : t_{type::String}, s_(s) {}
 
-    JValue(const char* s, int cout) : JValue(std::string_view(s, cout)) {}
+    JValue(const char* s, int cout) : JValue(std::string(s, cout)) {}
 
     JValue(int64_t value) : t_{type::Number}, nt_{number_type::Interger}, i_{value} {}
 
@@ -205,11 +202,13 @@ class JValue {
         return operator[](std::string{s});
     }
 
-    bool Has(std::string_view sv) {
+    bool Has(const std::string& sv) {
         if (t_ != type::Object) {
-            throw std::runtime_error("Expect type object to invoke Has method, but get type " + TypeString(t_));
+            throw std::runtime_error(
+                "Expect type object to invoke Has method, but get type " +
+                TypeString(t_));
         }
-        return o_.find(std::string(sv)) != o_.end();
+        return o_.find(sv) != o_.end();
     }
 
     void SetError() {
@@ -286,10 +285,10 @@ class JValue {
         return ss.str();
     }
 
-    static JValue Deserialize(std::string_view sv) {
+    static JValue Deserialize(std::string const& sv) {
         struct Parser
         {
-            Parser(std::string_view sv) : data_(sv), pos_(0) {}
+            Parser(std::string const& sv) : data_(sv), pos_(0) {}
 
             json::JValue Parse() {
                 ConsumeSpaces();
@@ -329,7 +328,7 @@ class JValue {
                 while (1) {
                     if (data_[pos_] == '\"') {
                         ++pos_;
-                        std::string_view ret = data_.substr(start, pos_ - 1 - start);
+                        std::string ret = data_.substr(start, pos_ - 1 - start);
                         return ret;
                     } else {
                         ++pos_;
@@ -347,6 +346,9 @@ class JValue {
                 if (!Consume('[')) {
                     return {};
                 }
+                if (Consume(']')) {
+                    return ret;
+                }
 
                 while (1) {
                     ConsumeSpaces();
@@ -354,19 +356,20 @@ class JValue {
                         ret.SetError();
                         break;
                     }
-                    if (data_[pos_] == ']') {
-                        ++pos_;
-                        break;
-                    }
-                    if (!ret.Array().empty()) {
-                        if (!Consume(',')) {
-                            return {};
-                        }
-                    }
+
                     JValue item = Parse();
                     if (item) {
                         ret.Array().push_back(item);
                     } else {
+                        return {};
+                    }
+
+                    if (data_[pos_] == ']') {
+                        ++pos_;
+                        break;
+                    }
+
+                    if (!Consume(',')) {
                         return {};
                     }
                     ConsumeSpaces();
@@ -380,27 +383,41 @@ class JValue {
                 if (!Consume('{')) {
                     return {};
                 }
+                ConsumeSpaces();
+                if (Consume('}')) {
+                    ++pos_;
+                    return ret;
+                }
 
                 while (1) {
                     ConsumeSpaces();
                     if (pos_ >= data_.size()) {
                         return {};
                     }
+                    JValue keyValue = ParseString();
+                    ConsumeSpaces();
+                    if (!keyValue) {
+                        return {};
+                    }
+                    if (!Consume(':')) {
+                        return {};
+                    }
+                    JValue v = Parse();
+                    ConsumeSpaces();
+                    if (!v) {
+                        return {};
+                    }
+                    std::string key = keyValue.Value<std::string>();
+                    ret[key] = v;
+
                     if (data_[pos_] == '}') {
                         ++pos_;
                         break;
                     }
-                    if (!ret.Object().empty() && !Consume(',')) {
-                        return {};
-                    }
-                    std::string key = ParseString().Value<std::string>();
-                    ConsumeSpaces();
-                    if (!Consume(':')) {
+                    if (!Consume(',')) {
                         return {};
                     }
                     ConsumeSpaces();
-                    JValue v = Parse();
-                    ret[key] = v;
                 }
                 return ret;
             }
@@ -491,7 +508,7 @@ class JValue {
                 return true;
             }
 
-            std::string_view data_;
+            std::string const& data_;
             size_t pos_;
         };
 
@@ -500,7 +517,7 @@ class JValue {
     }
 
     static JValue Deserialize(const char* s) {
-        return Deserialize(std::string_view{s});
+        return Deserialize(std::string(s));
     }
 
 private:

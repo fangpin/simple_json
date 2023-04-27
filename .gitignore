@@ -1,0 +1,8 @@
+ .vscode/
+a.out
+json.hpp.gch
+test.o
+.ccls-cache/
+.vscode/
+a.out.dSYM/
+json.h.gch
