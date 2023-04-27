@@ -6,21 +6,23 @@ This is a subway project, as an entertainment, I did most work during my daily t
 - [A simple Json library](#a-simple-json-library)
 - [Roadmap](#roadmap)
 - [Features](#features)
-  - [STL-style API is provided.](#stl-style-api-is-provided)
-  - [Simple to Seriliaze an JSON object](#simple-to-seriliaze-an-json-object)
-- [build](#build)
+  - [STL-style API](#stl-style-api)
+  - [Seriliaze](#seriliaze)
+  - [Desiralize](#desiralize)
+  - [Structure Binding](#structure-binding)
+- [Build](#build)
 
 # Roadmap
 - [x] Serialize
-- [ ] Deserialize
-- [ ] Structure binding
+- [x] Deserialize
+- [x] Structure binding
 - [ ] Memory pool optimization
 - [ ] simd optimization
 - [ ] Escape/Unescape string
 - [ ] Unicode support
 
 # Features
-## STL-style API is provided.
+## STL-style API
 you can initialize an JSON object by:
 ```cpp
 JValue person = unordered_map<string, JValue>{
@@ -66,7 +68,7 @@ cout << s.Type() << endl;
 cout << JValue::TypeString(s.Type()) << endl;
 ```
 
-## Simple to Seriliaze an JSON object
+## Seriliaze
 ```cpp
 cout << JValue::Serialize(person) << endl;
 ```
@@ -92,7 +94,27 @@ the output is:
 }
 ```
 
-# build
+## Desiralize
+```cpp
+JValue object = JValue::Deserialize(R"(
+{
+    "name" : "pin",
+    "age" : 18,
+    "height" : 179.9,
+    "sports" : ["basketball", "football", "swimming"],
+    "girl_friend" : {
+        "name" : "Jun",
+        "age" : 19,
+        "sports" : ["tennis", "dance"]
+    }
+})"
+);
+```
+
+## Structure Binding
+WIP
+
+# Build
 Tested on 
 ```bash
 clang version 10.0.0-4ubuntu1

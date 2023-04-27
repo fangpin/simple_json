@@ -1,6 +1,8 @@
 #include <iostream>
 #include <map>
-#include "json.hpp"
+#include <string>
+#include "json/json.hpp"
+#include "json/struct_bind.hpp"
 
 using namespace std;
 using namespace json;
@@ -86,11 +88,38 @@ void deserialize_example() {
     cout << endl;
 }
 
+void struct_bind_example() {
+    cout << "**************sturct_bind_example********************" << endl;
+    struct Person : public JsonBinder
+    {
+        string name_;
+        int age_;
+        string secrets_; // an example property that won't work in serialize and deserialize
+
+        void FromJson(JValue const& obj) override {
+            JValue name = obj["name"], age = obj["age"];
+            name_ = obj["name"].Value<string>();
+            age_ = age.Value<int>();
+        }
+
+        JValue ToJson() const override {
+            JValue obj(JValue::type::Object);
+            obj["name"] = name_;
+            obj["age"] = age_;
+            return obj;
+        }
+    } person;
+
+    person.Deserialize(R"({"name":"Pin", "age": 18})");
+    cout << person.Serialize() << endl;
+}
+
 int main() {
     basic_example();
     update_example();
     no_indent_example();
     deserialize_example();
+    struct_bind_example();
 
     return 0;
 }

@@ -78,7 +78,7 @@ class JValue {
 
     JValue(const std::initializer_list<JValue>& il) : t_{type::Array}, a_(il) {}
 
-    operator bool() const {
+    explicit operator bool() const {
         return t_ != type::Unknown;
     }
 
@@ -196,6 +196,14 @@ class JValue {
                                      TypeString(t_));
         }
         return o_[s];
+    }
+
+    JValue const& operator[](const std::string &s) const {
+        if (t_ != type::Object) {
+            throw std::runtime_error("Expect type object but get " +
+                                     TypeString(t_));
+        }
+        return o_.find(s)->second;
     }
 
     JValue& operator[](const char* s) {
@@ -486,9 +494,9 @@ class JValue {
                         break;
                     default:
                         if (state == State::DigitsAfterPoint || state == State::Point) {
-                            return JValue(data_.substr(start, pos_ - start));
+                            return JValue(std::stod(data_.substr(start, pos_ - start)));
                         } else {
-                            return JValue(data_.substr(start, pos_ - start));
+                            return JValue(std::stoi(data_.substr(start, pos_ - start)));
                         }
                     }
                     ++pos_;
