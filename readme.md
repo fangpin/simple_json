@@ -112,7 +112,33 @@ JValue object = JValue::Deserialize(R"(
 ```
 
 ## Structure Binding
-WIP
+Structure Binding is a helper class that allows you construct your struct from JSON string and convert your struct to JSON string. This is more like some workaround for C++ that doesn't support runtime reflection comparing to other language. So it's worth noting that structure binding is not the perfect solution as it's absolutely involved additional cost comparing to the template based static reflection, while it's also much more simple than static reflection.
+
+This library provide the helper class JsonBindery. Any class that inherits from JsonBinder and overrides the abstract method *FromJson* and *ToJson* can leverage the helper class to easily construct/convert from/to a JSON string. A simple example to use structure binding looks like:
+```cpp
+struct Person : public JsonBinder
+{
+    string name_;
+    int age_;
+    string secrets_; // an example property that won't work in serialize and deserialize
+
+    void FromJson(JValue const& obj) override {
+        JValue name = obj["name"], age = obj["age"];
+        name_ = obj["name"].Value<string>();
+        age_ = age.Value<int>();
+    }
+
+    JValue ToJson() const override {
+        JValue obj(JValue::type::Object);
+        obj["name"] = name_;
+        obj["age"] = age_;
+        return obj;
+    }
+} person;
+
+person.Deserialize(R"({"name":"Pin", "age": 18})");
+cout << person.Serialize() << endl;
+```
 
 # Build
 Tested on 
