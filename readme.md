@@ -10,6 +10,8 @@ This is a subway project, as an entertainment, I did most work during my daily t
   - [Seriliaze](#seriliaze)
   - [Desiralize](#desiralize)
   - [Structure Binding](#structure-binding)
+- [Memory Pool](#memory-pool)
+  - [Allocator](#allocator)
 - [Build](#build)
 
 # Roadmap
@@ -139,6 +141,11 @@ struct Person : public JsonBinder
 person.Deserialize(R"({"name":"Pin", "age": 18})");
 cout << person.Serialize() << endl;
 ```
+
+# Memory Pool
+WIP
+## Allocator
+[Allocator](https://learn.microsoft.com/en-us/cpp/standard-library/allocators?view=msvc-170)
 
 # Build
 Tested on 

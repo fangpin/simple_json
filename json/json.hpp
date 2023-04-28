@@ -60,23 +60,23 @@ class JValue {
         }
     }
 
-    JValue(type tp = type::Unknown) : t_{tp} {}
+    JValue(type tp = type::Unknown) noexcept : t_{tp} {}
 
-    JValue(const std::string& s) : t_(type::String), s_(s) {}
+    JValue(const std::string& s) noexcept : t_(type::String), s_(s) {}
 
-    JValue(const char* s) : t_{type::String}, s_(s) {}
+    JValue(const char* s) noexcept : t_{type::String}, s_(s) {}
 
-    JValue(const char* s, int cout) : JValue(std::string(s, cout)) {}
+    JValue(const char* s, int cout) noexcept : JValue(std::string(s, cout)) {}
 
-    JValue(int64_t value) : t_{type::Number}, nt_{number_type::Interger}, i_{value} {}
+    JValue(int64_t value) noexcept : t_{type::Number}, nt_{number_type::Interger}, i_{value} {}
 
-    JValue(int32_t value) : t_{type::Number}, nt_{number_type::Interger}, i_{value} {}
+    JValue(int32_t value) noexcept : t_{type::Number}, nt_{number_type::Interger}, i_{value} {}
 
-    JValue(double value) : t_{type::Number}, nt_{number_type::Float}, d_{value} {}
+    JValue(double value) noexcept : t_{type::Number}, nt_{number_type::Float}, d_{value} {}
 
-    JValue(bool flag) : t_{type::Bool}, b_{flag} {}
+    JValue(bool flag) noexcept : t_{type::Bool}, b_{flag} {}
 
-    JValue(const std::initializer_list<JValue>& il) : t_{type::Array}, a_(il) {}
+    JValue(const std::initializer_list<JValue>& il) noexcept : t_{type::Array}, a_(il) {}
 
     explicit operator bool() const {
         return t_ != type::Unknown;
